@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PrintAI Studio — AI Design PRO + OCR</title>
+<title>PrintAI Studio — AI Design PRO + GPT Image + OCR</title>
 <style>
 :root{--navy:#14283d;--blue:#2376c9;--bg:#eef2f6;--line:#d9e1e9;--muted:#6b7785}
 *{box-sizing:border-box}body{margin:0;font:14px/1.45 Inter,Arial,sans-serif;background:var(--bg);color:#1e2935}
@@ -56,7 +56,14 @@ button:disabled{opacity:.55;cursor:wait}
   <label>Tông màu</label><select id="designPalette"><option value="auto">AI tự chọn</option><option value="red">Đỏ — vàng</option><option value="navy">Xanh navy — vàng</option><option value="black">Đen — gold</option><option value="green">Xanh lá — kem</option><option value="pink">Hồng — trắng</option><option value="brown">Nâu — be</option><option value="blue">Xanh dương — trắng</option></select>
   <button class="tool primary" id="generateBtn">✦ AI DESIGN PRO — TẠO MẪU HOÀN CHỈNH</button>
   <button class="tool" id="variationBtn">⟳ Tạo phương án bố cục khác</button>
-  <div class="hint" id="designStatus">AI tự phân tích chủ đề, viết nội dung quảng cáo, phối màu, dựng bố cục và tự tạo hình minh họa vector có thể chỉnh sửa. Chạy cục bộ, không cần API key.</div>
+  <div class="hint" id="designStatus">AI tự phân tích chủ đề, viết nội dung quảng cáo, phối màu, dựng bố cục và tự tạo hình minh họa vector có thể chỉnh sửa. Bố cục vector chạy cục bộ; tạo ảnh chân thực cần cấu hình API key máy chủ.</div>
+ </div>
+ <div class="group" id="realAiGroup"><h3>AI tạo ảnh chân thực — GPT Image</h3>
+  <label>Ý tưởng hình ảnh / chủ đề</label><textarea id="realAiPrompt" placeholder="Ví dụ: Tách cà phê espresso nóng, khói bốc lên, hạt cà phê rang trên nền gỗ tối, ánh sáng điện ảnh, phong cách quảng cáo cao cấp..."></textarea>
+  <div class="fieldrow"><div><label>Chất lượng</label><select id="realAiQuality"><option value="medium">Tiêu chuẩn</option><option value="high" selected>Cao</option></select></div><div><label>Khung hình</label><select id="realAiRatio"><option value="portrait">Dọc 2:3</option><option value="square">Vuông 1:1</option><option value="landscape">Ngang 3:2</option></select></div></div>
+  <button class="tool primary" id="realAiGenerate">✦ TẠO ẢNH AI CHÂN THỰC</button>
+  <button class="tool" id="realAiFromBrief">✧ Tự viết prompt từ mô tả thiết kế</button>
+  <div class="hint" id="realAiStatus">Tạo ảnh nền quảng cáo chân thực bằng GPT Image. Cần cấu hình API key ở máy chủ để sử dụng.</div>
  </div>
  <div class="group"><h3>AI nhận diện văn bản (OCR)</h3>
   <label>Chọn ảnh / mẫu thiết kế</label><input id="ocrUpload" type="file" accept="image/png,image/jpeg,image/webp,image/bmp">
@@ -66,7 +73,7 @@ button:disabled{opacity:.55;cursor:wait}
  </div>
 </aside>
 <section class="stage">
- <div class="toolbar"><strong id="sizeLabel">210 × 297 mm</strong><span style="color:#8391a0">|</span><button id="frontBtn">Đưa lên trước</button><button id="backBtn">Đưa xuống sau</button><button id="saveBtn">Lưu bản thiết kế</button><button id="svgBtn">Tải SVG</button></div>
+ <div class="toolbar"><strong id="sizeLabel">210 × 297 mm</strong><span style="color:#8391a0">|</span><button id="frontBtn">Đưa lên trước</button><button id="backBtn">Đưa xuống sau</button><button id="saveBtn">Lưu bản thiết kế</button><button id="svgBtn">Tải SVG</button><button id="pngBtn">Tải PNG</button></div>
  <div class="workspace"><div id="artboard"><svg id="svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 297"></svg></div></div>
 </section>
 <aside class="right">
@@ -296,6 +303,48 @@ ocrButton.addEventListener('click',async()=>{
   console.error(err);ocrStatus.textContent='Có lỗi khi nhận diện ảnh. Hãy thử ảnh JPG/PNG rõ nét và kiểm tra kết nối Internet.';
  }finally{ocrButton.disabled=false;ocrButton.textContent='✦ Nhận diện chữ & đưa vào thiết kế';}
 });
+// REAL AI IMAGE GENERATION: API key stays on the local server, never in the browser.
+const realAiPrompt=document.getElementById('realAiPrompt');
+const realAiStatus=document.getElementById('realAiStatus');
+function buildRealPrompt(){
+ const brief=cleanBrief(document.getElementById('brief').value)||'Poster quảng cáo cà phê';
+ const type=document.getElementById('designType').value;
+ const style=document.getElementById('designStyle').value;
+ const palette=document.getElementById('designPalette').value;
+ const visual=inferVisual(brief,type);
+ const subject=visual==='coffee'||visual==='food'?'beautiful premium food and beverage product photography':visual==='beauty'?'luxury beauty and skincare product photography':visual==='salon'?'premium hair salon editorial photography':visual==='event'?'elegant event atmosphere photography':visual==='education'?'inspiring education campaign photography':'premium commercial advertising photography';
+ return `${subject}. Create a photorealistic, high-end advertising background for this Vietnamese print design: ${brief}. Art direction: ${style==='auto'?'professional commercial art direction':style}; color palette: ${palette==='auto'?'choose colors that fit the subject':palette}. Rich cinematic lighting, realistic materials and textures, professional studio photography, beautiful depth of field, refined composition, premium retouching. IMPORTANT: do not render any text, letters, logos, watermarks, labels, typography or numbers. Leave clean negative space for editable text overlay. Print-advertising quality.`;
+}
+document.getElementById('realAiFromBrief').onclick=()=>{realAiPrompt.value=buildRealPrompt();realAiStatus.textContent='Đã soạn prompt theo nội dung thiết kế. Bạn có thể chỉnh sửa rồi tạo ảnh.'};
+document.getElementById('realAiGenerate').onclick=async()=>{
+ const prompt=cleanBrief(realAiPrompt.value)||buildRealPrompt();
+ const btn=document.getElementById('realAiGenerate');
+ const ratio=document.getElementById('realAiRatio').value;
+ const sizes={portrait:'1024x1536',square:'1024x1024',landscape:'1536x1024'};
+ btn.disabled=true;btn.textContent='ĐANG TẠO ẢNH...';
+ realAiStatus.textContent='Đang kết nối máy chủ AI và tạo ảnh. Quá trình có thể mất một chút thời gian.';
+ try{
+  const response=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,size:sizes[ratio],quality:document.getElementById('realAiQuality').value})});
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||'Không thể tạo ảnh.');
+  if(!data.b64_json)throw new Error('Máy chủ không trả về dữ liệu ảnh.');
+  const href='data:image/png;base64,'+data.b64_json;
+  // Place the generated full-page image at the very back of the current SVG artwork.
+  const img=document.createElementNS(NS,'image');
+  img.setAttribute('x',0);img.setAttribute('y',0);img.setAttribute('width',W);img.setAttribute('height',H);
+  img.setAttribute('preserveAspectRatio','xMidYMid slice');img.setAttribute('href',href);img.dataset.id='ai-background-'+(++seq);img.dataset.aiBackground='true';
+  img.addEventListener('pointerdown',startDrag);img.addEventListener('click',ev=>{ev.stopPropagation();select(img)});
+  svg.insertBefore(img,svg.firstChild);select(img);
+  realAiStatus.textContent='Đã tạo ảnh AI và đặt làm nền thiết kế. Các lớp chữ/vector hiện tại vẫn có thể chỉnh sửa. Hãy kiểm tra bố cục và xuất file.';
+ }catch(err){realAiStatus.textContent='Lỗi: '+err.message+'. Kiểm tra máy chủ, API key và quyền sử dụng GPT Image.';}
+ finally{btn.disabled=false;btn.textContent='✦ TẠO ẢNH AI CHÂN THỰC'}
+};
+// Export a raster PNG preview at print-friendly resolution.
+document.getElementById('pngBtn').onclick=()=>{
+ const clone=svg.cloneNode(true);clone.setAttribute('xmlns',NS);clone.setAttribute('width',Math.round(W*10));clone.setAttribute('height',Math.round(H*10));
+ const source=new XMLSerializer().serializeToString(clone);const blob=new Blob([source],{type:'image/svg+xml;charset=utf-8'});const url=URL.createObjectURL(blob);const image=new Image();
+ image.onload=()=>{const canvas=document.createElement('canvas');canvas.width=Math.round(W*10);canvas.height=Math.round(H*10);const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);URL.revokeObjectURL(url);canvas.toBlob(b=>{if(!b)return;const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='printai-thiet-ke.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500)},'image/png')};image.onerror=()=>{URL.revokeObjectURL(url);alert('Không thể xuất PNG. Hãy thử xuất SVG hoặc PDF.')};image.src=url;
+};
 window.onresize=fit;setSize(210,297);addText('THIẾT KẾ CỦA BẠN',20,35,10);addText('Nhập nội dung và bắt đầu sáng tạo',20,48,5,'#617386');
 </script>
 <style>@media print{header,aside,.toolbar{display:none!important}main{display:block;height:auto}.stage{display:block}.workspace{display:block;padding:0;background:#fff}#artboard{box-shadow:none!important;width:100%!important;height:auto!important;aspect-ratio:210/297}body{background:#fff}}</style>
