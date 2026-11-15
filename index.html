@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PrintAI Studio — AI Design + OCR</title>
+<title>PrintAI Studio — AI Design PRO + OCR</title>
 <style>
 :root{--navy:#14283d;--blue:#2376c9;--bg:#eef2f6;--line:#d9e1e9;--muted:#6b7785}
 *{box-sizing:border-box}body{margin:0;font:14px/1.45 Inter,Arial,sans-serif;background:var(--bg);color:#1e2935}
@@ -34,7 +34,7 @@ button:disabled{opacity:.55;cursor:wait}
 @media(max-width:600px){main{grid-template-columns:1fr}aside.left{display:none}.workspace{padding:12px}}
 </style></head>
 <body>
-<header><div class="brand">Print<span>AI</span> Studio <small style="font-size:11px;font-weight:400;color:#c4d4e3">AI DESIGN + OCR</small></div><div class="actions"><span class="status">Thiết kế lưu trên trình duyệt</span><button id="newBtn">Mẫu mới</button><button class="primary" id="pdfBtn">Xuất / In PDF</button></div></header>
+<header><div class="brand">Print<span>AI</span> Studio <small style="font-size:11px;font-weight:400;color:#c4d4e3">AI DESIGN PRO + OCR</small></div><div class="actions"><span class="status">Thiết kế lưu trên trình duyệt</span><button id="newBtn">Mẫu mới</button><button class="primary" id="pdfBtn">Xuất / In PDF</button></div></header>
 <main>
 <aside class="left">
  <div class="group"><h3>Sản phẩm</h3>
@@ -49,14 +49,14 @@ button:disabled{opacity:.55;cursor:wait}
   <button class="tool" id="uploadBtn">＋ Chèn hình ảnh</button><input id="upload" type="file" accept="image/*" hidden>
   <button class="tool" id="deleteBtn">⌫ Xóa đối tượng</button>
  </div>
- <div class="group"><h3>AI Design — Tự dựng thiết kế</h3>
+ <div class="group"><h3>AI Design PRO — Thiết kế tự động</h3>
   <label>Mô tả yêu cầu</label><textarea id="brief" placeholder="Ví dụ: Poster khai trương tiệm tóc NAM, tiêu đề GRAND OPENING, ưu đãi giảm 20%, địa chỉ và số điện thoại..."></textarea>
   <label>Loại ấn phẩm</label><select id="designType"><option value="auto">AI tự nhận diện</option><option value="poster">Poster / quảng cáo</option><option value="banner">Banner / backdrop</option><option value="menu">Menu / bảng giá</option><option value="card">Danh thiếp</option><option value="flyer">Tờ rơi / brochure</option><option value="social">Bài đăng mạng xã hội</option></select>
   <label>Phong cách</label><select id="designStyle"><option value="auto">AI tự chọn theo nội dung</option><option value="luxury">Sang trọng</option><option value="modern">Hiện đại</option><option value="minimal">Tối giản</option><option value="youth">Trẻ trung, nổi bật</option><option value="traditional">Trang trọng</option></select>
   <label>Tông màu</label><select id="designPalette"><option value="auto">AI tự chọn</option><option value="red">Đỏ — vàng</option><option value="navy">Xanh navy — vàng</option><option value="black">Đen — gold</option><option value="green">Xanh lá — kem</option><option value="pink">Hồng — trắng</option><option value="brown">Nâu — be</option><option value="blue">Xanh dương — trắng</option></select>
-  <button class="tool primary" id="generateBtn">✦ AI phân tích & dựng thiết kế</button>
+  <button class="tool primary" id="generateBtn">✦ AI DESIGN PRO — TẠO MẪU HOÀN CHỈNH</button>
   <button class="tool" id="variationBtn">⟳ Tạo phương án bố cục khác</button>
-  <div class="hint" id="designStatus">Tự phân tích nội dung, nhận diện loại ấn phẩm, chọn bảng màu và dựng các lớp chữ/hình SVG có thể chỉnh sửa. Chạy trực tiếp trên trình duyệt, không cần API key.</div>
+  <div class="hint" id="designStatus">AI tự phân tích chủ đề, viết nội dung quảng cáo, phối màu, dựng bố cục và tự tạo hình minh họa vector có thể chỉnh sửa. Chạy cục bộ, không cần API key.</div>
  </div>
  <div class="group"><h3>AI nhận diện văn bản (OCR)</h3>
   <label>Chọn ảnh / mẫu thiết kế</label><input id="ocrUpload" type="file" accept="image/png,image/jpeg,image/webp,image/bmp">
@@ -128,66 +128,112 @@ function inferPalette(text){const t=text.toLowerCase();if(/đỏ đô|đỏ vàn
 function addLabel(text,x,y,size,color,weight='700',anchor='start'){const e=make('text',{x,y,fill:color,'font-size':size,'font-family':'Arial, sans-serif','font-weight':weight,'text-anchor':anchor});e.textContent=text;return e}
 function addLine(x1,y1,x2,y2,color,width=1){return make('line',{x1,y1,x2,y2,stroke:color,'stroke-width':width})}
 function wrapText(text,maxChars){const words=text.split(/\s+/),out=[];let line='';for(const word of words){if((line+' '+word).trim().length>maxChars&&line){out.push(line);line=word}else line=(line+' '+word).trim()}if(line)out.push(line);return out}
+function addIllustration(kind,cx,cy,size,c){
+ // Tạo cụm minh họa vector theo chủ đề; từng chi tiết là SVG có thể chọn/chỉnh sửa.
+ const g=make('g',{'data-illustration':kind});
+ const el=(tag,a)=>{const n=document.createElementNS(NS,tag);Object.entries(a).forEach(([k,v])=>n.setAttribute(k,v));g.appendChild(n);return n};
+ const circle=(x,y,r,fill,stroke='none',sw=0)=>el('circle',{cx:x,cy:y,r,fill,stroke,'stroke-width':sw});
+ const rect=(x,y,w,h,rx,fill,stroke='none',sw=0)=>el('rect',{x,y,width:w,height:h,rx,fill,stroke,'stroke-width':sw});
+ const path=(d,fill='none',stroke=c.accent,sw=3)=>el('path',{d,fill,stroke,'stroke-width':sw,'stroke-linecap':'round','stroke-linejoin':'round'});
+ const line=(x1,y1,x2,y2,stroke=c.ink,sw=2)=>el('line',{x1,y1,x2,y2,stroke,'stroke-width':sw,'stroke-linecap':'round'});
+ // Coordinates use a 100 x 100 design grid.
+ circle(50,50,47,c.soft);circle(50,50,39,'none',c.accent,1.5);
+ if(kind==='salon'||kind==='beauty'){
+   circle(50,35,17,'#f1c7aa');path('M33 35 Q29 8 51 12 Q75 12 68 40 Q63 24 48 25 Q42 34 33 35',c.primary,c.primary,2);
+   path('M27 88 Q29 57 50 56 Q72 57 75 88',c.primary,c.primary,2);path('M41 57 L50 72 L59 57','none',c.accent,3);
+   if(kind==='salon'){line(16,63,38,84,c.ink,3);line(38,63,16,84,c.ink,3);circle(14,61,5,'none',c.accent,3);circle(40,61,5,'none',c.accent,3)}
+   else {circle(78,28,9,c.accent);path('M78 16 Q86 7 91 16 Q88 24 78 28 Q68 24 66 16 Q71 7 78 16',c.soft,c.accent,2)}
+ }else if(kind==='food'||kind==='coffee'){
+   rect(23,37,54,42,10,'#fffaf0',c.accent,2);path('M77 47 Q94 43 88 64 Q84 72 77 67', 'none',c.accent,4);
+   path('M31 37 Q50 22 69 37', 'none',c.primary,4);path('M42 29 Q37 18 45 13 M55 28 Q62 17 56 10','none',c.ink,2);
+   if(kind==='food'){circle(50,54,11,c.accent);path('M40 54 Q50 40 60 54 Q50 68 40 54',c.primary,c.primary,1)}
+   else {path('M40 54 Q50 43 60 54 Q50 66 40 54',c.primary,c.primary,1);line(50,47,50,62,'#fff',2)}
+ }else if(kind==='tennis'||kind==='sport'){
+   el('ellipse',{cx:47,cy:48,rx:20,ry:29,transform:'rotate(35 47 48)',fill:'none',stroke:c.primary,'stroke-width':5});
+   path('M30 28 Q49 46 64 69 M63 25 Q47 48 31 69','none',c.accent,1.8);
+   line(62,66,83,88,c.ink,6);circle(20,22,7,'#c7e56b',c.primary,1.5);path('M15 17 Q25 20 24 28','none','#fff',1.5);
+ }else if(kind==='event'){
+   path('M18 78 L18 30 L50 48 L82 30 L82 78 Z',c.primary,c.accent,2);line(18,30,82,30,c.accent,3);
+   path('M25 30 L25 17 L75 17 L75 30','none',c.accent,3);circle(50,56,12,c.accent);path('M44 56 L49 61 L58 50','none',c.primary,3);
+   for(let i=0;i<5;i++)path(`M${20+i*15} 8 l3 7 l-3 7 l-3 -7 Z`,c.accent,c.accent,1);
+ }else if(kind==='education'){
+   path('M15 39 L50 20 L85 39 L50 58 Z',c.primary,c.accent,2);path('M27 48 L27 70 Q50 88 73 70 L73 48','none',c.primary,4);line(85,39,85,68,c.accent,2);circle(85,72,3,c.accent);
+ }else{
+   circle(50,43,18,c.accent);path('M50 20 Q28 29 32 49 Q42 61 50 60 Q65 56 68 43 Q68 26 50 20',c.primary,c.primary,2);path('M24 88 Q27 64 50 64 Q74 64 77 88',c.primary,c.primary,2);circle(50,43,7,c.soft);
+ }
+ // Sparkles / visual polish
+ path('M12 24 l3 6 l6 3 l-6 3 l-3 6 l-3 -6 l-6 -3 l6 -3 Z',c.accent,c.accent,1);
+ circle(84,17,2.5,c.accent);circle(87,78,2,c.primary);
+ return g;
+}
+function inferVisual(text,type){const t=text.toLowerCase();if(/tóc|hair|salon|barber|cắt tóc|uốn|nhuộm/.test(t))return'salon';if(/spa|mỹ phẩm|skincare|beauty|làm đẹp|nail/.test(t))return'beauty';if(/tennis|thể thao|bóng đá|bóng chuyền|cầu lông|fitness|gym/.test(t))return'tennis';if(/cà phê|coffee|trà|nước uống|quán|nhà hàng|món ăn|ẩm thực|menu/.test(t)||type==='menu')return'food';if(/khai trương|sự kiện|lễ|hội|chào mừng|backdrop|sân khấu|giải đấu/.test(t)||type==='banner')return'event';if(/trường|học|đào tạo|giáo dục|tuyển sinh/.test(t))return'education';return'general'}
+function makeGradient(c,id){const defs=document.createElementNS(NS,'defs'),grad=document.createElementNS(NS,'linearGradient');grad.setAttribute('id',id);grad.setAttribute('x1','0');grad.setAttribute('y1','0');grad.setAttribute('x2','1');grad.setAttribute('y2','1');[['0%',c.primary],['100%',c.ink]].forEach(([o,v])=>{const st=document.createElementNS(NS,'stop');st.setAttribute('offset',o);st.setAttribute('stop-color',v);grad.appendChild(st)});defs.appendChild(grad);svg.appendChild(defs)}
 function aiDesign(variant=0){
- const brief=cleanBrief(document.getElementById('brief').value)||'THIẾT KẾ QUẢNG CÁO MỚI';
- const chosenType=document.getElementById('designType').value, type=chosenType==='auto'?inferDesignType(brief):chosenType;
- const style=document.getElementById('designStyle').value, palette=document.getElementById('designPalette').value;
- const colors=paletteMap[palette==='auto'?inferPalette(brief):palette];
- const t=brief.toLowerCase();
+ const brief=cleanBrief(document.getElementById('brief').value)||'Thiết kế quảng cáo khai trương cửa hàng';
+ const chosenType=document.getElementById('designType').value,type=chosenType==='auto'?inferDesignType(brief):chosenType;
+ const style=document.getElementById('designStyle').value,palette=document.getElementById('designPalette').value;
+ const paletteKey=palette==='auto'?inferPalette(brief):palette,colors={...paletteMap[paletteKey]};
+ const visual=inferVisual(brief,type),t=brief.toLowerCase();
  const phone=(brief.match(/(?:0|\+84)[0-9 .-]{8,}/)||[])[0]||'';
  const date=(brief.match(/\b\d{1,2}[/.]\d{1,2}(?:[/.]\d{2,4})?\b/)||[])[0]||'';
- const words=brief.split(/[.!?\n,;]+/).map(x=>x.trim()).filter(Boolean);
- let headline=words.find(x=>/khai trương|grand opening|mừng|chào mừng|giải|sale|ưu đãi|khuyến mãi|tuyển|hello|welcome|menu|bảng giá/i.test(x))||words[0]||'THIẾT KẾ MỚI';
- headline=headline.toLocaleUpperCase('vi').slice(0,64);
- const details=words.filter(x=>x!==headline&&!/^poster|^banner|^thiết kế/i.test(x));
- const secondary=details[0]||'CHẤT LƯỢNG • UY TÍN • CHUYÊN NGHIỆP';
- const accent=variant%2?colors.soft:colors.accent;
- const dark=colors.ink, primary=colors.primary, bg=colors.bg;
- const margin=Math.max(8,W*.075), center=W/2;
- svg.innerHTML='';select(null);
+ const words=brief.split(/[.!?\n;]+/).map(x=>x.trim()).filter(Boolean);
+ const titleWords=['khai trương','grand opening','mừng','chào mừng','giải','sale','ưu đãi','khuyến mãi','tuyển','hello','welcome','menu','bảng giá','dịch vụ','ra mắt'];
+ let headline=words.find(x=>titleWords.some(k=>x.toLowerCase().includes(k)))||words[0]||'THIẾT KẾ MỚI';
+ headline=headline.toLocaleUpperCase('vi').slice(0,76);
+ let details=words.filter(x=>x!==headline&&!/^poster|^banner|^thiết kế/i.test(x));
+ const phoneLine=phone?'ĐẶT LỊCH / LIÊN HỆ: '+phone:'';
+ const autoCopy={salon:['TỎA SÁNG PHONG CÁCH RIÊNG','Chăm sóc tận tâm • Tạo kiểu chuyên nghiệp','Đặt lịch ngay hôm nay'],beauty:['CHĂM SÓC VẺ ĐẸP CỦA BẠN','Nâng niu vẻ đẹp – tự tin mỗi ngày','Trải nghiệm dịch vụ ngay'],food:['HƯƠNG VỊ KHÓ CƯỠNG','Tươi ngon mỗi ngày • Phục vụ tận tâm','Ghé thưởng thức ngay'],tennis:['BỨT PHÁ GIỚI HẠN','Năng lượng • Đam mê • Chinh phục','Cùng tham gia và tỏa sáng'],event:['CÙNG TẠO NÊN KHOẢNH KHẮC ĐÁNG NHỚ','Trang trọng – ấn tượng – chuyên nghiệp','Hân hạnh chào đón quý khách'],education:['CHẮP CÁNH TƯƠNG LAI','Kiến thức vững vàng – hành trang thành công','Đăng ký tìm hiểu ngay'],general:['GIẢI PHÁP CHẤT LƯỢNG DÀNH CHO BẠN','Uy tín • Chuyên nghiệp • Tận tâm','Liên hệ để được tư vấn']};
+ const copy=autoCopy[visual]||autoCopy.general;
+ const secondary=details[0]||copy[1],support=details.slice(1,4);
+ const accent=variant%3===1?colors.soft:colors.accent,primary=colors.primary,dark=colors.ink,bg=colors.bg;
+ const margin=Math.max(8,W*.07),center=W/2;
+ svg.innerHTML='';select(null);makeGradient(colors,'aiHeroGradient');
  make('rect',{x:0,y:0,width:W,height:H,fill:bg});
- // Design-specific composition, all vector elements remain editable.
- if(type==='menu'){
-   make('rect',{x:0,y:0,width:W,height:H*.23,fill:primary});
-   addLabel('MENU',center,H*.13,Math.max(12,W*.095),colors.accent,'800','middle');
-   addLabel(headline=== 'THIẾT KẾ MỚI'?'THỰC ĐƠN':headline,center,H*.20,Math.max(5,W*.025),'#ffffff','600','middle');
-   let y=H*.34;details.slice(0,9).forEach((d,i)=>{const price=(d.match(/[0-9][0-9.,]*\s*(?:k|đ|đồng)/i)||[])[0]||'';const name=d.replace(price,'').trim().slice(0,42);addLabel(name||`MÓN ${i+1}`,margin,y,Math.max(4,W*.024),dark,'600');if(price)addLabel(price,W-margin,y,Math.max(4,W*.024),primary,'700','end');addLine(margin,y+H*.018,W-margin,y+H*.018,colors.soft,.5);y+=H*.065});
+ // Background color fields, ornamental rings and soft geometric shapes.
+ make('circle',{cx:W*.91,cy:H*.12,r:Math.min(W,H)*.24,fill:colors.soft,opacity:.72});
+ make('circle',{cx:W*.08,cy:H*.88,r:Math.min(W,H)*.18,fill:accent,opacity:.16});
+ let titleSize=Math.max(7,Math.min(W*.075,H*.11));
+ if(type==='banner'){
+   make('rect',{x:0,y:0,width:W,height:H,fill:'url(#aiHeroGradient)'});
+   make('rect',{x:margin*.45,y:margin*.45,width:W-margin*.9,height:H-margin*.9,fill:'none',stroke:accent,'stroke-width':Math.max(.8,W*.005)});
+   addIllustration(visual,W*.82,H*.5,Math.min(W,H)*.42,{...colors,accent,primary,ink:dark,soft:colors.soft});
+   addLabel((details[0]||copy[0]).toLocaleUpperCase('vi').slice(0,64),W*.43,H*.28,Math.max(5,W*.035),'#fff','700','middle');
+   wrapText(headline,Math.max(12,Math.floor(W*.48/titleSize))).slice(0,3).forEach((line,i)=>addLabel(line,W*.43,H*.47+i*H*.13,titleSize,accent,'800','middle'));
+   addLabel(date||details[1]||copy[2],W*.43,H*.88,Math.max(4,W*.027),'#fff','600','middle');
+ }else if(type==='menu'){
+   make('rect',{x:0,y:0,width:W,height:H*.25,fill:'url(#aiHeroGradient)'});
+   addIllustration('food',W*.82,H*.12,Math.min(W,H)*.18,{...colors,accent,primary,ink:dark,soft:colors.soft});
+   addLabel(headline==='THIẾT KẾ MỚI'?'THỰC ĐƠN':headline,center,H*.17,Math.max(9,W*.07),accent,'800','middle');
+   addLabel('HƯƠNG VỊ TƯƠI NGON MỖI NGÀY',center,H*.22,Math.max(3.5,W*.022),'#fff','600','middle');
+   let y=H*.34;const rows=details.length?details.slice(0,10):['MÓN ĐẶC BIỆT .......... 45K','MÓN YÊU THÍCH .......... 35K','ĐỒ UỐNG ................ 25K'];
+   rows.forEach((d,i)=>{const price=(d.match(/[0-9][0-9.,]*\s*(?:k|đ|đồng)/i)||[])[0]||'';const name=d.replace(price,'').replace(/[.·_]{2,}/g,'').trim().slice(0,48);addLabel(name||`MÓN ${i+1}`,margin,y,Math.max(4,W*.025),dark,'600');if(price)addLabel(price,W-margin,y,Math.max(4,W*.025),primary,'800','end');addLine(margin,y+H*.02,W-margin,y+H*.02,colors.soft,.6);y+=H*.061});
  }else if(type==='card'){
-   make('rect',{x:0,y:0,width:W*.34,height:H,fill:primary});
-   make('circle',{cx:W*.17,cy:H*.36,r:Math.min(W,H)*.09,fill:accent});
-   addLabel('BRAND',W*.17,H*.39,Math.max(5,W*.025),primary,'800','middle');
-   addLabel(headline, W*.42,H*.35,Math.max(7,W*.052),dark,'800');
-   addLabel(secondary.slice(0,42),W*.42,H*.48,Math.max(4,W*.023),primary,'600');
-   if(phone)addLabel(phone,W*.42,H*.66,Math.max(4,W*.025),dark,'700');
-   addLabel(details[1]||'ĐỊA CHỈ • WEBSITE • EMAIL',W*.42,H*.78,Math.max(3.5,W*.018),dark,'400');
- }else if(type==='banner'){
-   make('rect',{x:0,y:0,width:W,height:H,fill:primary});
-   make('rect',{x:margin*.45,y:margin*.45,width:W-margin*.9,height:H-margin*.9,fill:'none',stroke:accent,'stroke-width':Math.max(.8,W*.006)});
-   make('circle',{cx:W*.12,cy:H*.5,r:Math.min(W,H)*.10,fill:accent,opacity:.22});
-   addLabel(secondary.toLocaleUpperCase('vi').slice(0,55),center,H*.34,Math.max(5,W*.035),'#ffffff','600','middle');
-   wrapText(headline,Math.max(12,Math.floor(W/Math.max(5,W*.055)))).slice(0,2).forEach((line,i)=>addLabel(line,center,H*.53+i*H*.13,Math.max(9,W*.065),accent,'800','middle'));
-   if(date)addLabel(date,center,H*.83,Math.max(5,W*.03),'#ffffff','700','middle');
+   make('rect',{x:0,y:0,width:W*.32,height:H,fill:'url(#aiHeroGradient)'});
+   addIllustration(visual,W*.16,H*.38,Math.min(W,H)*.29,{...colors,accent,primary,ink:dark,soft:colors.soft});
+   addLabel('PRINTAI',W*.16,H*.78,Math.max(4,W*.028),accent,'800','middle');
+   addLabel(headline,W*.40,H*.34,Math.max(6,W*.052),dark,'800');
+   addLabel(secondary.slice(0,48),W*.40,H*.47,Math.max(3.5,W*.022),primary,'600');
+   if(phone)addLabel(phone,W*.40,H*.65,Math.max(4,W*.026),dark,'700');
+   addLabel(details[1]||'ĐỊA CHỈ • WEBSITE • EMAIL',W*.40,H*.78,Math.max(3,W*.018),dark,'400');
  }else{
-   // Poster / flyer / social editorial layout.
-   const topH=H*(type==='social'?.42:.32);
-   make('rect',{x:0,y:0,width:W,height:topH,fill:primary});
-   make('circle',{cx:W*.88,cy:H*.10,r:Math.min(W,H)*.13,fill:accent,opacity:.22});
-   make('rect',{x:margin,y:margin,width:W*.22,height:Math.max(2,H*.012),fill:accent});
-   addLabel(type==='flyer'?'THÔNG TIN':type==='social'?'NỘI DUNG NỔI BẬT':'SPECIAL • DESIGN',margin,H*.11,Math.max(4,W*.023),'#ffffff','700');
-   const lines=wrapText(headline,Math.max(10,Math.floor(W/Math.max(5,W*.058)))).slice(0,3);
-   lines.forEach((line,i)=>addLabel(line,margin,H*.20+i*H*.085,Math.max(8,W*.058),accent,'800'));
-   addLabel(secondary.slice(0,65),margin,topH+H*.105,Math.max(4,W*.027),dark,'700');
-   const body=details.slice(1,4);let y=topH+H*.19;
-   body.forEach((line,i)=>{make('circle',{cx:margin+2,cy:y-H*.012,r:Math.max(1.5,W*.008),fill:primary});addLabel(line.slice(0,72),margin+W*.045,y,Math.max(3.5,W*.021),dark,'500');y+=H*.065});
-   make('rect',{x:margin,y:H*.76,width:W-margin*2,height:H*.12,rx:Math.max(2,W*.015),fill:accent});
-   addLabel(phone||date||'LIÊN HỆ NGAY',center,H*.835,Math.max(5,W*.038),primary,'800','middle');
+   const topH=H*(type==='social'?.47:type==='flyer'?.37:.43);
+   make('rect',{x:0,y:0,width:W,height:topH,fill:'url(#aiHeroGradient)'});
+   // Main visual is automatically inserted, not just a placeholder shape.
+   addIllustration(visual,W*.78,topH*.53,Math.min(W*.42,topH*.9),{...colors,accent,primary,ink:dark,soft:colors.soft});
+   make('rect',{x:margin,y:margin,width:W*.18,height:Math.max(2,H*.012),fill:accent});
+   addLabel(type==='flyer'?'THÔNG TIN CHI TIẾT':type==='social'?'NỔI BẬT HÔM NAY':'ĐẶC BIỆT DÀNH CHO BẠN',margin,H*.105,Math.max(3.5,W*.021),'#fff','700');
+   const lines=wrapText(headline,Math.max(10,Math.floor(W*.55/titleSize))).slice(0,3);
+   lines.forEach((line,i)=>addLabel(line,margin,H*.22+i*H*.09,Math.max(7,Math.min(W*.061,H*.09)),accent,'800'));
+   addLabel(secondary.slice(0,72),margin,topH+H*.105,Math.max(4,W*.027),dark,'700');
+   const body=support.length?support:copy.slice(1);let y=topH+H*.19;
+   body.slice(0,4).forEach((line,i)=>{make('circle',{cx:margin+2,cy:y-H*.012,r:Math.max(1.5,W*.007),fill:primary});wrapText(line,Math.floor(W*.78/Math.max(3.5,W*.021))).slice(0,2).forEach((ln,j)=>addLabel(ln,margin+W*.045,y+j*H*.035,Math.max(3.5,W*.021),dark,'500'));y+=H*.075});
+   // Bold CTA footer band with contact or generated call-to-action.
+   make('rect',{x:margin,y:H*.79,width:W-margin*2,height:H*.105,rx:Math.max(2,W*.015),fill:accent});
+   addLabel(phoneLine||date||copy[2],center,H*.855,Math.max(4.5,W*.034),primary,'800','middle');
  }
- // Decorative corner accents and editable footer.
- if(style==='luxury'||palette==='black'||palette==='brown'){
-   make('rect',{x:margin*.55,y:margin*.55,width:W-margin*1.1,height:H-margin*1.1,fill:'none',stroke:accent,'stroke-width':Math.max(.5,W*.002)});
- }
- if(type!=='banner'&&type!=='card'&&type!=='menu')addLabel('PRINTAI STUDIO',W-margin,H-margin*.55,Math.max(2.5,W*.014),primary,'600','end');
- document.getElementById('designStatus').textContent=`Đã dựng phương án ${variant+1}: ${type.toUpperCase()} • phong cách ${style==='auto'?'tự chọn':style} • bảng màu ${palette==='auto'?inferPalette(brief):palette}. Các lớp chữ và hình đều là SVG có thể chọn, kéo và chỉnh sửa.`;
+ if(style==='luxury'||paletteKey==='black'||paletteKey==='brown')make('rect',{x:margin*.55,y:margin*.55,width:W-margin*1.1,height:H-margin*1.1,fill:'none',stroke:accent,'stroke-width':Math.max(.5,W*.002)});
+ if(type!=='banner'&&type!=='card'&&type!=='menu')addLabel('PRINTAI STUDIO • AI DESIGN PRO',W-margin,H-margin*.55,Math.max(2.5,W*.013),primary,'600','end');
+ document.getElementById('designStatus').textContent=`AI Design Pro đã tạo phương án ${variant+1}: ${type.toUpperCase()} • chủ đề ${visual.toUpperCase()} • bảng màu ${paletteKey.toUpperCase()}. Đã tự thêm minh họa vector, nội dung gợi ý, CTA và bố cục. Chọn từng thành phần để chỉnh sửa.`;
 }
 document.getElementById('generateBtn').onclick=()=>{designVariant=0;aiDesign(0)};
 document.getElementById('variationBtn').onclick=()=>{designVariant++;aiDesign(designVariant)};
