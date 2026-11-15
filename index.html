@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PrintAI Studio — Bản khởi đầu</title>
+<title>PrintAI Studio — AI Design + OCR</title>
 <style>
 :root{--navy:#14283d;--blue:#2376c9;--bg:#eef2f6;--line:#d9e1e9;--muted:#6b7785}
 *{box-sizing:border-box}body{margin:0;font:14px/1.45 Inter,Arial,sans-serif;background:var(--bg);color:#1e2935}
@@ -28,11 +28,13 @@ textarea{min-height:88px;resize:vertical}
 .hint{font-size:12px;color:var(--muted);margin-top:10px}
 .fieldrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .status{font-size:12px;color:#d6e6f4}
+#designStatus{padding:8px;background:#f1f7fd;border-radius:6px;color:#38536d}
+button:disabled{opacity:.55;cursor:wait}
 @media(max-width:850px){main{grid-template-columns:170px minmax(250px,1fr)}aside.right{display:none}}
 @media(max-width:600px){main{grid-template-columns:1fr}aside.left{display:none}.workspace{padding:12px}}
 </style></head>
 <body>
-<header><div class="brand">Print<span>AI</span> Studio <small style="font-size:11px;font-weight:400;color:#c4d4e3">BẢN KHỞI ĐẦU</small></div><div class="actions"><span class="status">Thiết kế lưu trên trình duyệt</span><button id="newBtn">Mẫu mới</button><button class="primary" id="pdfBtn">Xuất / In PDF</button></div></header>
+<header><div class="brand">Print<span>AI</span> Studio <small style="font-size:11px;font-weight:400;color:#c4d4e3">AI DESIGN + OCR</small></div><div class="actions"><span class="status">Thiết kế lưu trên trình duyệt</span><button id="newBtn">Mẫu mới</button><button class="primary" id="pdfBtn">Xuất / In PDF</button></div></header>
 <main>
 <aside class="left">
  <div class="group"><h3>Sản phẩm</h3>
@@ -47,10 +49,20 @@ textarea{min-height:88px;resize:vertical}
   <button class="tool" id="uploadBtn">＋ Chèn hình ảnh</button><input id="upload" type="file" accept="image/*" hidden>
   <button class="tool" id="deleteBtn">⌫ Xóa đối tượng</button>
  </div>
- <div class="group"><h3>AI thiết kế (bản thử)</h3>
-  <label>Mô tả thiết kế</label><textarea id="brief" placeholder="Ví dụ: Poster khai trương quán cà phê, tông nâu kem, nổi bật số điện thoại..."></textarea>
-  <button class="tool primary" id="generateBtn">✦ Tạo bố cục mẫu</button>
-  <div class="hint">Đây là bộ tạo bố cục mẫu chạy tại máy, chưa kết nối mô hình AI trực tuyến.</div>
+ <div class="group"><h3>AI Design — Tự dựng thiết kế</h3>
+  <label>Mô tả yêu cầu</label><textarea id="brief" placeholder="Ví dụ: Poster khai trương tiệm tóc NAM, tiêu đề GRAND OPENING, ưu đãi giảm 20%, địa chỉ và số điện thoại..."></textarea>
+  <label>Loại ấn phẩm</label><select id="designType"><option value="auto">AI tự nhận diện</option><option value="poster">Poster / quảng cáo</option><option value="banner">Banner / backdrop</option><option value="menu">Menu / bảng giá</option><option value="card">Danh thiếp</option><option value="flyer">Tờ rơi / brochure</option><option value="social">Bài đăng mạng xã hội</option></select>
+  <label>Phong cách</label><select id="designStyle"><option value="auto">AI tự chọn theo nội dung</option><option value="luxury">Sang trọng</option><option value="modern">Hiện đại</option><option value="minimal">Tối giản</option><option value="youth">Trẻ trung, nổi bật</option><option value="traditional">Trang trọng</option></select>
+  <label>Tông màu</label><select id="designPalette"><option value="auto">AI tự chọn</option><option value="red">Đỏ — vàng</option><option value="navy">Xanh navy — vàng</option><option value="black">Đen — gold</option><option value="green">Xanh lá — kem</option><option value="pink">Hồng — trắng</option><option value="brown">Nâu — be</option><option value="blue">Xanh dương — trắng</option></select>
+  <button class="tool primary" id="generateBtn">✦ AI phân tích & dựng thiết kế</button>
+  <button class="tool" id="variationBtn">⟳ Tạo phương án bố cục khác</button>
+  <div class="hint" id="designStatus">Tự phân tích nội dung, nhận diện loại ấn phẩm, chọn bảng màu và dựng các lớp chữ/hình SVG có thể chỉnh sửa. Chạy trực tiếp trên trình duyệt, không cần API key.</div>
+ </div>
+ <div class="group"><h3>AI nhận diện văn bản (OCR)</h3>
+  <label>Chọn ảnh / mẫu thiết kế</label><input id="ocrUpload" type="file" accept="image/png,image/jpeg,image/webp,image/bmp">
+  <button class="tool primary" id="ocrBtn">✦ Nhận diện chữ & đưa vào thiết kế</button>
+  <label>Kết quả nhận diện (có thể sửa)</label><textarea id="ocrResult" placeholder="Văn bản nhận diện sẽ xuất hiện tại đây..."></textarea>
+  <div class="hint" id="ocrStatus">Nhận diện tiếng Việt và tiếng Anh bằng Tesseract.js. Cần kết nối Internet lần đầu để tải bộ ngôn ngữ.</div>
  </div>
 </aside>
 <section class="stage">
@@ -81,7 +93,7 @@ textarea{min-height:88px;resize:vertical}
 const svg=document.getElementById('svg'), board=document.getElementById('artboard');
 let W=210,H=297,selected=null,drag=null,seq=0;
 const NS='http://www.w3.org/2000/svg';
-function fit(){const maxW=Math.min(innerWidth-520,760),maxH=innerHeight-150,scale=Math.min(maxW/W,maxH/H);board.style.width=(W*scale)+'px';board.style.height=(H*scale)+'px';}
+function fit(){const maxW=Math.max(180,Math.min(innerWidth-(innerWidth<850?30:540),760)),maxH=Math.max(180,innerHeight-150),scale=Math.min(maxW/W,maxH/H);board.style.width=(W*scale)+'px';board.style.height=(H*scale)+'px';}
 function setSize(w,h){W=+w;H=+h;svg.setAttribute('viewBox',`0 0 ${W} ${H}`);document.getElementById('width').value=W;document.getElementById('height').value=H;document.getElementById('sizeLabel').textContent=`${W} × ${H} mm`;fit();}
 function make(tag,attrs={}){const e=document.createElementNS(NS,tag);Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));e.dataset.id='o'+(++seq);e.addEventListener('pointerdown',startDrag);e.addEventListener('click',ev=>{ev.stopPropagation();select(e)});svg.appendChild(e);return e;}
 function addText(text='Nhập nội dung tại đây',x=20,y=35,size=9,color='#203040'){const e=make('text',{x,y,fill:color,'font-size':size,'font-family':'Arial, sans-serif','font-weight':'700'});e.textContent=text;select(e);return e;}
@@ -99,7 +111,86 @@ document.getElementById('preset').onchange=e=>{if(e.target.value!=='custom'){con
 document.getElementById('resizeBtn').onclick=()=>setSize(document.getElementById('width').value,document.getElementById('height').value);
 document.getElementById('uploadBtn').onclick=()=>document.getElementById('upload').click();
 document.getElementById('upload').onchange=e=>{const f=e.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{const im=make('image',{x:15,y:15,width:W*.55,height:H*.35,href:reader.result,preserveAspectRatio:'xMidYMid meet'});select(im)};reader.readAsDataURL(f)};
-document.getElementById('generateBtn').onclick=()=>{const brief=document.getElementById('brief').value.trim()||'THIẾT KẾ MỚI';svg.innerHTML='';select(null);addRect(0,0,W,H,'#f5f1e8');const band=make('rect',{x:0,y:0,width:W,height:H*.22,fill:'#173b59'});addText('THIẾT KẾ • IN ẤN',W*.08,H*.12,Math.max(5,W*.035),'#ffffff');addText(brief.slice(0,70),W*.08,H*.39,Math.max(7,W*.045),'#173b59');addRect(W*.08,H*.48,W*.84,H*.24,'#d9e8ed');addText('THÔNG TIN LIÊN HỆ',W*.08,H*.82,Math.max(5,W*.025),'#173b59');addText('Điện thoại: 0xxx xxx xxx',W*.08,H*.88,Math.max(4,W*.02),'#173b59');};
+// AI Design: phân tích brief tiếng Việt, suy luận loại ấn phẩm/bảng màu và dựng bố cục SVG nhiều lớp có thể chỉnh sửa.
+let designVariant=0;
+const paletteMap={
+ red:{bg:'#fff5ed',primary:'#9f1d27',accent:'#f4bd45',ink:'#321b1b',soft:'#f8dfd4'},
+ navy:{bg:'#f4f6fa',primary:'#142d4e',accent:'#d8ad55',ink:'#172638',soft:'#dce5ef'},
+ black:{bg:'#111214',primary:'#1c1d20',accent:'#d6b46a',ink:'#fff8e8',soft:'#34312b'},
+ green:{bg:'#f4f2e7',primary:'#285b48',accent:'#d4b56a',ink:'#26372e',soft:'#dce7d9'},
+ pink:{bg:'#fff4f8',primary:'#c64f7a',accent:'#f1b7c9',ink:'#542b3c',soft:'#f9dce7'},
+ brown:{bg:'#f4eadb',primary:'#68452f',accent:'#c69a61',ink:'#3b2b21',soft:'#e8d6bd'},
+ blue:{bg:'#f2f8fc',primary:'#17649a',accent:'#f1c75b',ink:'#17364c',soft:'#d8eaf5'}
+};
+function cleanBrief(t){return (t||'').replace(/\s+/g,' ').trim()}
+function inferDesignType(text){const t=text.toLowerCase();if(/menu|thực đơn|bảng giá|giá tiền|đồng giá/.test(t))return'menu';if(/danh thiếp|name ?card|card visit/.test(t))return'card';if(/backdrop|sân khấu|khánh thành|khai mạc|giải đấu|banner|băng rôn/.test(t))return'banner';if(/brochure|gấp đôi|gấp ba|tờ rơi|flyer|catalog/.test(t))return'flyer';if(/facebook|instagram|mạng xã hội|bài đăng|social/.test(t))return'social';return'poster'}
+function inferPalette(text){const t=text.toLowerCase();if(/đỏ đô|đỏ vàng|mừng lễ|tết|khai trương|ưu đãi/.test(t))return'red';if(/đen gold|đen vàng|sang trọng|cao cấp|luxury/.test(t))return'black';if(/nâu|cà phê|coffee|gỗ/.test(t))return'brown';if(/hồng|spa|mỹ phẩm|beauty/.test(t))return'pink';if(/xanh lá|thiên nhiên|organic/.test(t))return'green';if(/navy|xanh đậm|tennis|thể thao/.test(t))return'navy';return'blue'}
+function addLabel(text,x,y,size,color,weight='700',anchor='start'){const e=make('text',{x,y,fill:color,'font-size':size,'font-family':'Arial, sans-serif','font-weight':weight,'text-anchor':anchor});e.textContent=text;return e}
+function addLine(x1,y1,x2,y2,color,width=1){return make('line',{x1,y1,x2,y2,stroke:color,'stroke-width':width})}
+function wrapText(text,maxChars){const words=text.split(/\s+/),out=[];let line='';for(const word of words){if((line+' '+word).trim().length>maxChars&&line){out.push(line);line=word}else line=(line+' '+word).trim()}if(line)out.push(line);return out}
+function aiDesign(variant=0){
+ const brief=cleanBrief(document.getElementById('brief').value)||'THIẾT KẾ QUẢNG CÁO MỚI';
+ const chosenType=document.getElementById('designType').value, type=chosenType==='auto'?inferDesignType(brief):chosenType;
+ const style=document.getElementById('designStyle').value, palette=document.getElementById('designPalette').value;
+ const colors=paletteMap[palette==='auto'?inferPalette(brief):palette];
+ const t=brief.toLowerCase();
+ const phone=(brief.match(/(?:0|\+84)[0-9 .-]{8,}/)||[])[0]||'';
+ const date=(brief.match(/\b\d{1,2}[/.]\d{1,2}(?:[/.]\d{2,4})?\b/)||[])[0]||'';
+ const words=brief.split(/[.!?\n,;]+/).map(x=>x.trim()).filter(Boolean);
+ let headline=words.find(x=>/khai trương|grand opening|mừng|chào mừng|giải|sale|ưu đãi|khuyến mãi|tuyển|hello|welcome|menu|bảng giá/i.test(x))||words[0]||'THIẾT KẾ MỚI';
+ headline=headline.toLocaleUpperCase('vi').slice(0,64);
+ const details=words.filter(x=>x!==headline&&!/^poster|^banner|^thiết kế/i.test(x));
+ const secondary=details[0]||'CHẤT LƯỢNG • UY TÍN • CHUYÊN NGHIỆP';
+ const accent=variant%2?colors.soft:colors.accent;
+ const dark=colors.ink, primary=colors.primary, bg=colors.bg;
+ const margin=Math.max(8,W*.075), center=W/2;
+ svg.innerHTML='';select(null);
+ make('rect',{x:0,y:0,width:W,height:H,fill:bg});
+ // Design-specific composition, all vector elements remain editable.
+ if(type==='menu'){
+   make('rect',{x:0,y:0,width:W,height:H*.23,fill:primary});
+   addLabel('MENU',center,H*.13,Math.max(12,W*.095),colors.accent,'800','middle');
+   addLabel(headline=== 'THIẾT KẾ MỚI'?'THỰC ĐƠN':headline,center,H*.20,Math.max(5,W*.025),'#ffffff','600','middle');
+   let y=H*.34;details.slice(0,9).forEach((d,i)=>{const price=(d.match(/[0-9][0-9.,]*\s*(?:k|đ|đồng)/i)||[])[0]||'';const name=d.replace(price,'').trim().slice(0,42);addLabel(name||`MÓN ${i+1}`,margin,y,Math.max(4,W*.024),dark,'600');if(price)addLabel(price,W-margin,y,Math.max(4,W*.024),primary,'700','end');addLine(margin,y+H*.018,W-margin,y+H*.018,colors.soft,.5);y+=H*.065});
+ }else if(type==='card'){
+   make('rect',{x:0,y:0,width:W*.34,height:H,fill:primary});
+   make('circle',{cx:W*.17,cy:H*.36,r:Math.min(W,H)*.09,fill:accent});
+   addLabel('BRAND',W*.17,H*.39,Math.max(5,W*.025),primary,'800','middle');
+   addLabel(headline, W*.42,H*.35,Math.max(7,W*.052),dark,'800');
+   addLabel(secondary.slice(0,42),W*.42,H*.48,Math.max(4,W*.023),primary,'600');
+   if(phone)addLabel(phone,W*.42,H*.66,Math.max(4,W*.025),dark,'700');
+   addLabel(details[1]||'ĐỊA CHỈ • WEBSITE • EMAIL',W*.42,H*.78,Math.max(3.5,W*.018),dark,'400');
+ }else if(type==='banner'){
+   make('rect',{x:0,y:0,width:W,height:H,fill:primary});
+   make('rect',{x:margin*.45,y:margin*.45,width:W-margin*.9,height:H-margin*.9,fill:'none',stroke:accent,'stroke-width':Math.max(.8,W*.006)});
+   make('circle',{cx:W*.12,cy:H*.5,r:Math.min(W,H)*.10,fill:accent,opacity:.22});
+   addLabel(secondary.toLocaleUpperCase('vi').slice(0,55),center,H*.34,Math.max(5,W*.035),'#ffffff','600','middle');
+   wrapText(headline,Math.max(12,Math.floor(W/Math.max(5,W*.055)))).slice(0,2).forEach((line,i)=>addLabel(line,center,H*.53+i*H*.13,Math.max(9,W*.065),accent,'800','middle'));
+   if(date)addLabel(date,center,H*.83,Math.max(5,W*.03),'#ffffff','700','middle');
+ }else{
+   // Poster / flyer / social editorial layout.
+   const topH=H*(type==='social'?.42:.32);
+   make('rect',{x:0,y:0,width:W,height:topH,fill:primary});
+   make('circle',{cx:W*.88,cy:H*.10,r:Math.min(W,H)*.13,fill:accent,opacity:.22});
+   make('rect',{x:margin,y:margin,width:W*.22,height:Math.max(2,H*.012),fill:accent});
+   addLabel(type==='flyer'?'THÔNG TIN':type==='social'?'NỘI DUNG NỔI BẬT':'SPECIAL • DESIGN',margin,H*.11,Math.max(4,W*.023),'#ffffff','700');
+   const lines=wrapText(headline,Math.max(10,Math.floor(W/Math.max(5,W*.058)))).slice(0,3);
+   lines.forEach((line,i)=>addLabel(line,margin,H*.20+i*H*.085,Math.max(8,W*.058),accent,'800'));
+   addLabel(secondary.slice(0,65),margin,topH+H*.105,Math.max(4,W*.027),dark,'700');
+   const body=details.slice(1,4);let y=topH+H*.19;
+   body.forEach((line,i)=>{make('circle',{cx:margin+2,cy:y-H*.012,r:Math.max(1.5,W*.008),fill:primary});addLabel(line.slice(0,72),margin+W*.045,y,Math.max(3.5,W*.021),dark,'500');y+=H*.065});
+   make('rect',{x:margin,y:H*.76,width:W-margin*2,height:H*.12,rx:Math.max(2,W*.015),fill:accent});
+   addLabel(phone||date||'LIÊN HỆ NGAY',center,H*.835,Math.max(5,W*.038),primary,'800','middle');
+ }
+ // Decorative corner accents and editable footer.
+ if(style==='luxury'||palette==='black'||palette==='brown'){
+   make('rect',{x:margin*.55,y:margin*.55,width:W-margin*1.1,height:H-margin*1.1,fill:'none',stroke:accent,'stroke-width':Math.max(.5,W*.002)});
+ }
+ if(type!=='banner'&&type!=='card'&&type!=='menu')addLabel('PRINTAI STUDIO',W-margin,H-margin*.55,Math.max(2.5,W*.014),primary,'600','end');
+ document.getElementById('designStatus').textContent=`Đã dựng phương án ${variant+1}: ${type.toUpperCase()} • phong cách ${style==='auto'?'tự chọn':style} • bảng màu ${palette==='auto'?inferPalette(brief):palette}. Các lớp chữ và hình đều là SVG có thể chọn, kéo và chỉnh sửa.`;
+}
+document.getElementById('generateBtn').onclick=()=>{designVariant=0;aiDesign(0)};
+document.getElementById('variationBtn').onclick=()=>{designVariant++;aiDesign(designVariant)};
 document.getElementById('saveBtn').onclick=()=>{localStorage.setItem('printai_svg',svg.outerHTML);alert('Đã lưu thiết kế trên trình duyệt này.')};
 document.getElementById('newBtn').onclick=()=>{svg.innerHTML='';select(null);addText('BẮT ĐẦU THIẾT KẾ',20,35,10)};
 document.getElementById('svgBtn').onclick=()=>download(new XMLSerializer().serializeToString(svg),'thiet-ke.svg','image/svg+xml');
@@ -108,6 +199,57 @@ document.getElementById('pdfBtn').onclick=()=>window.print();
 document.getElementById('frontBtn').onclick=()=>{if(selected)svg.appendChild(selected)};
 document.getElementById('backBtn').onclick=()=>{if(selected)svg.insertBefore(selected,svg.firstChild)};
 document.getElementById('imposeBtn').onclick=()=>{const cols=Math.max(1,+document.getElementById('cols').value),rows=Math.max(1,+document.getElementById('rows').value),gap=+document.getElementById('gap').value,source=svg.innerHTML,oldW=W,oldH=H;const copy=document.createElementNS(NS,'g');copy.innerHTML=source;svg.innerHTML='';setSize(210,297);for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const g=document.createElementNS(NS,'g');g.setAttribute('transform',`translate(${c*(oldW+gap)},${r*(oldH+gap)}) scale(1)`);g.innerHTML=source;svg.appendChild(g)}const totalW=cols*oldW+(cols-1)*gap,totalH=rows*oldH+(rows-1)*gap;setSize(totalW,totalH);};
+
+// AI OCR: chạy trong trình duyệt, không cần API key hoặc máy chủ riêng.
+let ocrWorker=null, ocrFile=null;
+const ocrInput=document.getElementById('ocrUpload');
+const ocrButton=document.getElementById('ocrBtn');
+const ocrStatus=document.getElementById('ocrStatus');
+const ocrResult=document.getElementById('ocrResult');
+ocrInput.addEventListener('change',()=>{ocrFile=ocrInput.files&&ocrInput.files[0];ocrStatus.textContent=ocrFile?`Đã chọn: ${ocrFile.name}`:'Chưa chọn ảnh.';});
+ocrButton.addEventListener('click',async()=>{
+ if(!ocrFile){ocrStatus.textContent='Vui lòng chọn ảnh thiết kế trước.';return;}
+ if(!window.Tesseract){ocrStatus.textContent='Không tải được thư viện OCR. Hãy kiểm tra Internet và tải lại trang.';return;}
+ ocrButton.disabled=true;ocrButton.textContent='Đang nhận diện...';
+ try{
+  ocrStatus.textContent='Đang tải bộ nhận diện tiếng Việt + tiếng Anh...';
+  if(!ocrWorker) ocrWorker=await Tesseract.createWorker('vie+eng',1,{logger:m=>{
+   if(m.status==='recognizing text')ocrStatus.textContent=`Đang đọc chữ: ${Math.round((m.progress||0)*100)}%`;
+   else if(m.status)ocrStatus.textContent=m.status;
+  }});
+  const result=await ocrWorker.recognize(ocrFile);
+  const data=result.data||{}, lines=(data.lines||[]).filter(l=>(l.text||'').trim());
+  ocrResult.value=(data.text||'').trim();
+  if(!lines.length){ocrStatus.textContent='Không tìm thấy dòng chữ rõ ràng trong ảnh. Hãy thử ảnh nét hơn.';return;}
+  // Map tọa độ chữ từ ảnh gốc vào trang thiết kế theo tỷ lệ contain.
+  const bitmap=await createImageBitmap(ocrFile);
+  const scale=Math.min(W/bitmap.width,H/bitmap.height);
+  const drawW=bitmap.width*scale,drawH=bitmap.height*scale;
+  const offsetX=(W-drawW)/2,offsetY=(H-drawH)/2;
+  const group=make('g',{'data-ocr-group':'true'});
+  // make() appends to SVG; move generated text nodes into a group for easier selection.
+  lines.forEach(line=>{
+   const b=line.bbox||{x0:0,y0:0,x1:bitmap.width,y1:20};
+   const x=offsetX+b.x0*scale, y=offsetY+b.y1*scale;
+   const fontSize=Math.max(2,(b.y1-b.y0)*scale*0.82);
+   const textNode=document.createElementNS(NS,'text');
+   textNode.setAttribute('x',x);textNode.setAttribute('y',y);
+   textNode.setAttribute('fill','#203040');textNode.setAttribute('font-size',fontSize);
+   textNode.setAttribute('font-family','Arial, sans-serif');textNode.setAttribute('font-weight','600');
+   textNode.textContent=line.text.trim();textNode.dataset.id='o'+(++seq);
+   textNode.addEventListener('pointerdown',startDrag);
+   textNode.addEventListener('click',ev=>{ev.stopPropagation();select(textNode)});
+   group.appendChild(textNode);
+  });
+  // Keep recognized text as editable SVG objects; remove the temporary empty group wrapper.
+  const nodes=[...group.children];group.remove();nodes.forEach(n=>svg.appendChild(n));
+  select(nodes[0]||null);
+  ocrStatus.textContent=`Đã nhận diện ${lines.length} dòng chữ. Chữ đã được đưa vào trang dưới dạng đối tượng có thể chọn và chỉnh sửa. Vui lòng rà soát dấu tiếng Việt và vị trí.`;
+  if(bitmap.close)bitmap.close();
+ }catch(err){
+  console.error(err);ocrStatus.textContent='Có lỗi khi nhận diện ảnh. Hãy thử ảnh JPG/PNG rõ nét và kiểm tra kết nối Internet.';
+ }finally{ocrButton.disabled=false;ocrButton.textContent='✦ Nhận diện chữ & đưa vào thiết kế';}
+});
 window.onresize=fit;setSize(210,297);addText('THIẾT KẾ CỦA BẠN',20,35,10);addText('Nhập nội dung và bắt đầu sáng tạo',20,48,5,'#617386');
 </script>
 <style>@media print{header,aside,.toolbar{display:none!important}main{display:block;height:auto}.stage{display:block}.workspace{display:block;padding:0;background:#fff}#artboard{box-shadow:none!important;width:100%!important;height:auto!important;aspect-ratio:210/297}body{background:#fff}}</style>
